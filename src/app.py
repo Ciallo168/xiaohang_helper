@@ -85,35 +85,36 @@ with col_right:
         files = list(Path("data").glob("*.md"))
         if not files:
             st.warning("⚠️ 数据文件缺失，请补齐 data/ 目录下的 md 文件")
+            st.session_state.school_info = "【数据文件缺失】请检查 data/ 目录下是否有 md 文件"
         else:
             with st.spinner("正在加载校园资料..."):
                 st.session_state.school_info = load_school_info()
 
     # -- 提问按钮 --
-    if st.button("🚀 提问", type="primary") and question and question.strip():
-        with st.spinner("小航正在思考中..."):
+    if st.button("🚀 提问", type="primary"):
+        if question and question.strip():
+            with st.spinner("小航正在思考中..."):
 
-            # 生成 system prompt
-            system_prompt = get_system_prompt(role, st.session_state.school_info)
+                # 生成 system prompt
+                system_prompt = get_system_prompt(role, st.session_state.school_info)
 
-            # 调用 API
-            answer, usage = call_ai_api(system_prompt, question.strip())
+                # 调用 API
+                answer, usage = call_ai_api(system_prompt, question.strip())
 
-            # 显示回答
-            st.subheader("🤖 小航的回答")
-            st.markdown(answer)
+                # 显示回答
+                st.subheader("🤖 小航的回答")
+                st.markdown(answer)
 
-            # 显示 Token 消耗
-            if usage:
-                st.caption(
-                    f"📊 Token 消耗："
-                    f"输入 {usage.get('prompt_tokens', 'N/A')} + "
-                    f"输出 {usage.get('completion_tokens', 'N/A')} = "
-                    f"总计 {usage.get('total_tokens', 'N/A')}"
-                )
-
-    elif question is not None and not question.strip():
-        st.info("💡 请输入你的问题，或点击左侧推荐问题")
+                # 显示 Token 消耗
+                if usage:
+                    st.caption(
+                        f"📊 Token 消耗："
+                        f"输入 {usage.get('prompt_tokens', 'N/A')} + "
+                        f"输出 {usage.get('completion_tokens', 'N/A')} = "
+                        f"总计 {usage.get('total_tokens', 'N/A')}"
+                    )
+        else:
+            st.info("💡 请输入你的问题，或点击左侧推荐问题")
 
     # -- 电话黄页静态页（API 不可用时的兜底）--
     st.divider()

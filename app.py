@@ -89,11 +89,13 @@ def call_api(system_prompt, user_question):
         result = resp.json()
         return result["choices"][0]["message"]["content"], result.get("usage", {})
     except requests.exceptions.Timeout:
-        return "AI 响应超时，请稍后再试", {}
+        return "⏰ AI 响应超时，请稍后再试", {}
     except requests.exceptions.ConnectionError:
-        return "网络连接失败，请检查网络", {}
+        return "🌐 网络连接失败，请检查网络", {}
+    except (KeyError, IndexError):
+        return "❌ AI 返回格式异常，请重试", {}
     except Exception as e:
-        return f"发生错误：{e}", {}
+        return f"⚠️ 发生错误：{e}", {}
 
 # ───────── 推荐问题 ─────────
 PRESET = {
@@ -125,19 +127,24 @@ with col_right:
     )
 
     if "school_info" not in st.session_state:
-        st.session_state.school_info = load_school_info()
+        files = list(Path("data").glob("*.md"))
+        if not files:
+            st.warning("⚠️ 数据文件缺失，请补齐 data/ 目录下的 md 文件")
+            st.session_state.school_info = "【数据文件缺失】请检查 data/ 目录下是否有 md 文件"
+        else:
+            st.session_state.school_info = load_school_info()
 
-    if st.button("🚀 提问", type="primary") and question and question.strip():
-        with st.spinner("小航正在思考中..."):
-            prompt = get_system_prompt(role, st.session_state.school_info)
-            answer, usage = call_api(prompt, question.strip())
-            st.subheader("🤖 小航的回答")
-            st.markdown(answer)
-            if usage:
-                st.caption(f"Token：输入{usage.get('prompt_tokens','?')} + 输出{usage.get('completion_tokens','?')} = 总计{usage.get('total_tokens','?')}")
-
-    elif question is not None and not question.strip():
-        st.info("💡 请输入你的问题，或点击左侧推荐问题")
+    if st.button("🚀 提问", type="primary"):
+        if question and question.strip():
+            with st.spinner("小航正在思考中..."):
+                prompt = get_system_prompt(role, st.session_state.school_info)
+                answer, usage = call_api(prompt, question.strip())
+                st.subheader("🤖 小航的回答")
+                st.markdown(answer)
+                if usage:
+                    st.caption(f"Token：输入{usage.get('prompt_tokens','?')} + 输出{usage.get('completion_tokens','?')} = 总计{usage.get('total_tokens','?')}")
+        else:
+            st.info("💡 请输入你的问题，或点击左侧推荐问题")
 
     st.divider()
     with st.expander("📞 电话黄页（静态兜底）"):
