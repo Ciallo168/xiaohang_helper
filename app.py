@@ -3,7 +3,9 @@
 运行：双击 启动小航.bat
 """
 import sys
+import json
 from pathlib import Path
+from datetime import datetime
 import requests
 
 # ───────── 让 streamlit 和依赖可以被导入 ─────────
@@ -33,6 +35,31 @@ def load_school_info():
         except Exception:
             parts.append(f"=== {f.name} ===\n【读取失败】")
     return "\n\n".join(parts)
+
+# ───────── 历史记录 ─────────
+HISTORY_FILE = Path("data") / "history.json"
+
+def _load_history():
+    if not HISTORY_FILE.exists():
+        return []
+    try:
+        return json.loads(HISTORY_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+
+def _add_record(role, question, answer):
+    history = _load_history()
+    history.append({
+        "role": role,
+        "question": question,
+        "answer": answer,
+        "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    })
+    HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
+    HISTORY_FILE.write_text(json.dumps(history, ensure_ascii=False, indent=2), encoding="utf-8")
+
+def _clear_history():
+    HISTORY_FILE.write_text("[]", encoding="utf-8")
 
 # ───────── Prompt 工程 ─────────
 ROLE_PROMPTS = {
@@ -119,6 +146,28 @@ with col_left:
             st.session_state["question"] = q
             st.rerun()
 
+    # -- 历史记录 --
+    st.divider()
+    st.subheader("📋 历史记录")
+
+    if "history" not in st.session_state:
+        st.session_state.history = _load_history()
+
+    if st.button("🗑️ 清空历史记录", use_container_width=True):
+        _clear_history()
+        st.session_state.history = []
+        st.rerun()
+
+    if st.session_state.history:
+        for idx, record in enumerate(reversed(st.session_state.history)):
+            real_idx = len(st.session_state.history) - 1 - idx
+            label = f"{record['time']} [{record['role']}] {record['question'][:20]}..."
+            if st.button(label, key=f"hist_{real_idx}", use_container_width=True):
+                st.session_state["view_history"] = record
+                st.rerun()
+    else:
+        st.caption("暂无历史记录")
+
 with col_right:
     question = st.text_input(
         "💬 有什么想问的？",
@@ -134,11 +183,25 @@ with col_right:
         else:
             st.session_state.school_info = load_school_info()
 
+    # -- 查看历史记录详情 --
+    if "view_history" in st.session_state and st.session_state.view_history:
+        record = st.session_state.view_history
+        st.info(f"📋 历史记录 | {record['time']} | 身份：{record['role']}")
+        st.markdown(f"**❓ 问题：**{record['question']}")
+        st.markdown(f"**🤖 回答：**{record['answer']}")
+        st.divider()
+
     if st.button("🚀 提问", type="primary"):
         if question and question.strip():
             with st.spinner("小航正在思考中..."):
                 prompt = get_system_prompt(role, st.session_state.school_info)
                 answer, usage = call_api(prompt, question.strip())
+
+                # 保存到历史记录
+                _add_record(role, question.strip(), answer)
+                if "history" in st.session_state:
+                    st.session_state.history = _load_history()
+
                 st.subheader("🤖 小航的回答")
                 st.markdown(answer)
                 if usage:

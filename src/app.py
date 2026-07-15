@@ -23,6 +23,7 @@ if _LOCAL_PKGS.exists():
 import streamlit as st
 from src.prompts import load_school_info, get_system_prompt
 from src.api import call_ai_api
+from src.history import load_history, add_record, clear_history
 
 # ==================== 12 个推荐问题（按身份分类） ====================
 PRESET_QUESTIONS = {
@@ -70,6 +71,30 @@ with col_left:
             st.session_state["question"] = q
             st.rerun()
 
+    # -- 历史记录 --
+    st.divider()
+    st.subheader("📋 历史记录")
+
+    # 初始化历史记录到 session_state（仅首次加载）
+    if "history" not in st.session_state:
+        st.session_state.history = load_history()
+
+    if st.button("🗑️ 清空历史记录", use_container_width=True):
+        clear_history()
+        st.session_state.history = []
+        st.rerun()
+
+    if st.session_state.history:
+        # 倒序显示，最新的在最上面
+        for idx, record in enumerate(reversed(st.session_state.history)):
+            real_idx = len(st.session_state.history) - 1 - idx
+            label = f"{record['time']} [{record['role']}] {record['question'][:20]}..."
+            if st.button(label, key=f"hist_{real_idx}", use_container_width=True):
+                st.session_state["view_history"] = record
+                st.rerun()
+    else:
+        st.caption("暂无历史记录")
+
 # ==================== 右侧：问题输入 + 回答显示 ====================
 with col_right:
     # -- 问题输入框 --
@@ -90,6 +115,14 @@ with col_right:
             with st.spinner("正在加载校园资料..."):
                 st.session_state.school_info = load_school_info()
 
+    # -- 查看历史记录详情 --
+    if "view_history" in st.session_state and st.session_state.view_history:
+        record = st.session_state.view_history
+        st.info(f"📋 历史记录 | {record['time']} | 身份：{record['role']}")
+        st.markdown(f"**❓ 问题：**{record['question']}")
+        st.markdown(f"**🤖 回答：**{record['answer']}")
+        st.divider()
+
     # -- 提问按钮 --
     if st.button("🚀 提问", type="primary"):
         if question and question.strip():
@@ -100,6 +133,11 @@ with col_right:
 
                 # 调用 API
                 answer, usage = call_ai_api(system_prompt, question.strip())
+
+                # 保存到历史记录
+                add_record(role, question.strip(), answer)
+                if "history" in st.session_state:
+                    st.session_state.history = load_history()
 
                 # 显示回答
                 st.subheader("🤖 小航的回答")
@@ -132,7 +170,7 @@ with col_right:
 | 后勤服务热线/物业报修 | 0371-61913110 | 水电维修 |
 | 卡务中心 | 0371-61912810 | 一卡通挂失补办 |
 | 招生办公室 | 0371-61912530 | 综合楼 |
-| 全国心理援助热线 | 12320-5 | 24小时在线 |
+| 全国心理援助热线 | 12320-5 | 24小时免费在线 |
 """)
 
 # ==================== 页脚 ====================
