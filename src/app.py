@@ -53,7 +53,7 @@ st.set_page_config(page_title="小航AI助手", page_icon="🎓", layout="wide")
 
 # ==================== 标题和边界声明 ====================
 st.title("🎓 小航 · 郑州航院校园信息助手")
-st.caption("基于 Streamlit + 硅基流动大模型 API | 数据更新日期：2026-07-15")
+st.caption("基于 Streamlit + 硅基流动大模型 API | 数据更新日期：2026-07-16")
 
 # ==================== 左右分栏布局 ====================
 col_left, col_right = st.columns([1, 3])
