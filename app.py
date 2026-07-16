@@ -257,7 +257,9 @@ with col_right:
     if st.session_state.processing:
         with st.spinner("小航正在思考中..."):
             prompt = get_system_prompt(role, st.session_state.school_info)
+            t0 = time.time()
             answer, usage = call_api(prompt, st.session_state.get("question", "").strip())
+            elapsed = time.time() - t0
 
             # 保存到历史记录
             _add_record(role, st.session_state.get("question", "").strip(), answer)
@@ -265,6 +267,8 @@ with col_right:
 
             st.session_state["last_answer"] = answer
             st.session_state["last_usage"] = usage
+            st.session_state["elapsed"] = elapsed
+            st.session_state["answer_chars"] = len(answer)
 
         st.session_state.processing = False
         st.rerun()
@@ -276,6 +280,10 @@ with col_right:
         usage = st.session_state.get("last_usage", {})
         if usage:
             st.caption(f"Token：输入{usage.get('prompt_tokens','?')} + 输出{usage.get('completion_tokens','?')} = 总计{usage.get('total_tokens','?')}")
+        # 显示回答元信息
+        chars = st.session_state.get("answer_chars", 0)
+        elapsed = st.session_state.get("elapsed", 0)
+        st.caption(f"回答字数：{chars} 字 · 耗时：{elapsed:.1f} 秒")
         # 导出当前对话
         q = st.session_state.get("question", "")
         a = st.session_state.last_answer

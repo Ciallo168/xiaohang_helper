@@ -10,6 +10,7 @@
 
 import sys
 from pathlib import Path
+import time
 
 # 项目根目录（streamlit 会切换 cwd，用绝对路径最可靠）
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -160,8 +161,10 @@ with col_right:
             # 生成 system prompt
             system_prompt = get_system_prompt(role, st.session_state.school_info)
 
-            # 调用 API
+            # 调用 API（计时）
+            t0 = time.time()
             answer, usage = call_ai_api(system_prompt, st.session_state.get("question", "").strip())
+            elapsed = time.time() - t0
 
             # 保存到历史记录
             add_record(role, st.session_state.get("question", "").strip(), answer)
@@ -169,6 +172,8 @@ with col_right:
 
             st.session_state["last_answer"] = answer
             st.session_state["last_usage"] = usage
+            st.session_state["elapsed"] = elapsed
+            st.session_state["answer_chars"] = len(answer)
 
         st.session_state.processing = False
         st.rerun()
@@ -187,6 +192,10 @@ with col_right:
                 f"输出 {usage.get('completion_tokens', 'N/A')} = "
                 f"总计 {usage.get('total_tokens', 'N/A')}"
             )
+        # 显示回答元信息
+        chars = st.session_state.get("answer_chars", 0)
+        elapsed = st.session_state.get("elapsed", 0)
+        st.caption(f"回答字数：{chars} 字 · 耗时：{elapsed:.1f} 秒")
         # 导出当前对话
         q = st.session_state.get("question", "")
         a = st.session_state.last_answer
