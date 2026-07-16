@@ -4,6 +4,7 @@
 """
 import sys
 import json
+import time
 from pathlib import Path
 from datetime import datetime
 import requests
@@ -20,7 +21,8 @@ import streamlit as st
 API_URL = "https://api.siliconflow.cn/v1/chat/completions"
 API_KEY = "sk-gfiyfctmuzepkxtylqvxygpceskmucwdypqunqcvxyxoyouq"
 MODEL = "zai-org/GLM-5.2"
-TIMEOUT = 30
+TIMEOUT = 60
+MAX_RETRIES = 2
 
 # ───────── 数据读取 ─────────
 def load_school_info():
@@ -107,22 +109,27 @@ def call_api(system_prompt, user_question):
         "temperature": 0.3,
         "max_tokens": 1024,
     }
-    try:
-        resp = requests.post(API_URL, headers=headers, json=data, timeout=TIMEOUT)
-        if resp.status_code == 401:
-            return "API Key 失效，请联系老师", {}
-        if resp.status_code != 200:
-            return f"API 异常，状态码：{resp.status_code}", {}
-        result = resp.json()
-        return result["choices"][0]["message"]["content"], result.get("usage", {})
-    except requests.exceptions.Timeout:
-        return "⏰ AI 响应超时，请稍后再试", {}
-    except requests.exceptions.ConnectionError:
-        return "🌐 网络连接失败，请检查网络", {}
-    except (KeyError, IndexError):
-        return "❌ AI 返回格式异常，请重试", {}
-    except Exception as e:
-        return f"⚠️ 发生错误：{e}", {}
+    last_error = None
+    for attempt in range(MAX_RETRIES + 1):
+        try:
+            resp = requests.post(API_URL, headers=headers, json=data, timeout=TIMEOUT)
+            if resp.status_code == 401:
+                return "API Key 失效，请联系老师", {}
+            if resp.status_code != 200:
+                return f"API 异常，状态码：{resp.status_code}", {}
+            result = resp.json()
+            return result["choices"][0]["message"]["content"], result.get("usage", {})
+        except requests.exceptions.Timeout:
+            last_error = "⏰ AI 响应超时，请稍后再试"
+            if attempt < MAX_RETRIES:
+                time.sleep(2)
+        except requests.exceptions.ConnectionError:
+            return "🌐 网络连接失败，请检查网络", {}
+        except (KeyError, IndexError):
+            return "❌ AI 返回格式异常，请重试", {}
+        except Exception as e:
+            return f"⚠️ 发生错误：{e}", {}
+    return last_error, {}
 
 # ───────── 推荐问题 ─────────
 PRESET = {
@@ -202,6 +209,7 @@ with col_right:
 
     if st.button("🚀 提问", type="primary", disabled=st.session_state.processing):
         if question and question.strip():
+            st.session_state["question"] = question.strip()
             st.session_state.processing = True
             st.rerun()
         else:

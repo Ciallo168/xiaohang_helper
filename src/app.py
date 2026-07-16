@@ -135,6 +135,7 @@ with col_right:
     # -- 提问按钮 --
     if st.button("🚀 提问", type="primary", disabled=st.session_state.processing):
         if question and question.strip():
+            st.session_state["question"] = question.strip()
             st.session_state.processing = True
             st.rerun()
         else:
