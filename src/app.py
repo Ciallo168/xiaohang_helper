@@ -25,25 +25,27 @@ from src.prompts import load_school_info, get_system_prompt
 from src.api import call_ai_api
 from src.history import load_history, add_record, clear_history
 
-# ==================== 12 个推荐问题（按身份分类） ====================
-PRESET_QUESTIONS = {
-    "新生": [
+# ==================== 推荐问题（按类别标签页） ====================
+TAB_QUESTIONS = {
+    "新生指南": [
         "报到那天先去哪？",
         "学费什么时候交？",
         "宿舍是4人间还是6人间？",
-        "有人冒充辅导员要钱怎么办？",
+        "怎么去学校？",
     ],
-    "在校生": [
+    "办事流程": [
         "怎么开在读证明？",
         "校园卡丢了怎么补？",
         "转专业怎么转？",
         "图书馆几点关？",
-    ],
-    "教师": [
         "差旅怎么报销？",
         "调课怎么申请？",
-        "教室设备坏了找谁？",
-        "科研项目去哪申报？",
+    ],
+    "应急防骗": [
+        "有人冒充辅导员要钱怎么办？",
+        "接到诈骗电话怎么办？",
+        "保卫处电话是多少？",
+        "心理压力大找谁？",
     ],
 }
 
@@ -67,13 +69,15 @@ with col_left:
     # -- 身份选择 --
     role = st.selectbox("👤 请选择你的身份", ["新生", "在校生", "教师"])
 
-    # -- 推荐问题按钮（12个，按当前身份显示4个）--
+    # -- 推荐问题标签页 --
     st.subheader("💡 试试这些问题：")
-    questions = PRESET_QUESTIONS.get(role, [])
-    for i, q in enumerate(questions):
-        if st.button(q, key=f"btn_{i}", use_container_width=True):
-            st.session_state["question"] = q
-            st.rerun()
+    tabs = st.tabs(list(TAB_QUESTIONS.keys()))
+    for tab_idx, (tab_name, questions) in enumerate(TAB_QUESTIONS.items()):
+        with tabs[tab_idx]:
+            for i, q in enumerate(questions):
+                if st.button(q, key=f"tab_{tab_idx}_{i}", use_container_width=True):
+                    st.session_state["question"] = q
+                    st.rerun()
 
     # -- 历史记录 --
     st.divider()
