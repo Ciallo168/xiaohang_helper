@@ -79,7 +79,10 @@ with col_left:
     if "history" not in st.session_state:
         st.session_state.history = load_history()
 
-    if st.button("🗑️ 清空历史记录", use_container_width=True):
+    if "processing" not in st.session_state:
+        st.session_state.processing = False
+
+    if st.button("🗑️ 清空历史记录", use_container_width=True, disabled=st.session_state.processing):
         clear_history()
         st.session_state.history = []
         st.rerun()
@@ -89,7 +92,7 @@ with col_left:
         for idx, record in enumerate(reversed(st.session_state.history)):
             real_idx = len(st.session_state.history) - 1 - idx
             label = f"{record['time']} [{record['role']}] {record['question'][:20]}..."
-            if st.button(label, key=f"hist_{real_idx}", use_container_width=True):
+            if st.button(label, key=f"hist_{real_idx}", use_container_width=True, disabled=st.session_state.processing):
                 st.session_state["view_history"] = record
                 st.rerun()
     else:
@@ -130,35 +133,45 @@ with col_right:
         st.divider()
 
     # -- 提问按钮 --
-    if st.button("🚀 提问", type="primary"):
+    if st.button("🚀 提问", type="primary", disabled=st.session_state.processing):
         if question and question.strip():
-            with st.spinner("小航正在思考中..."):
-
-                # 生成 system prompt
-                system_prompt = get_system_prompt(role, st.session_state.school_info)
-
-                # 调用 API
-                answer, usage = call_ai_api(system_prompt, question.strip())
-
-                # 保存到历史记录
-                add_record(role, question.strip(), answer)
-                if "history" in st.session_state:
-                    st.session_state.history = load_history()
-
-                # 显示回答
-                st.subheader("🤖 小航的回答")
-                st.markdown(answer)
-
-                # 显示 Token 消耗
-                if usage:
-                    st.caption(
-                        f"📊 Token 消耗："
-                        f"输入 {usage.get('prompt_tokens', 'N/A')} + "
-                        f"输出 {usage.get('completion_tokens', 'N/A')} = "
-                        f"总计 {usage.get('total_tokens', 'N/A')}"
-                    )
+            st.session_state.processing = True
+            st.rerun()
         else:
             st.info("💡 请输入你的问题，或点击左侧推荐问题")
+
+    if st.session_state.processing:
+        with st.spinner("小航正在思考中..."):
+            # 生成 system prompt
+            system_prompt = get_system_prompt(role, st.session_state.school_info)
+
+            # 调用 API
+            answer, usage = call_ai_api(system_prompt, st.session_state.get("question", "").strip())
+
+            # 保存到历史记录
+            add_record(role, st.session_state.get("question", "").strip(), answer)
+            st.session_state.history = load_history()
+
+            st.session_state["last_answer"] = answer
+            st.session_state["last_usage"] = usage
+
+        st.session_state.processing = False
+        st.rerun()
+
+    # -- 显示上一次的回答 --
+    if "last_answer" in st.session_state and st.session_state.last_answer:
+        st.subheader("🤖 小航的回答")
+        st.markdown(st.session_state.last_answer)
+
+        # 显示 Token 消耗
+        usage = st.session_state.get("last_usage", {})
+        if usage:
+            st.caption(
+                f"📊 Token 消耗："
+                f"输入 {usage.get('prompt_tokens', 'N/A')} + "
+                f"输出 {usage.get('completion_tokens', 'N/A')} = "
+                f"总计 {usage.get('total_tokens', 'N/A')}"
+            )
 
     # -- 电话黄页静态页（API 不可用时的兜底）--
     st.divider()
