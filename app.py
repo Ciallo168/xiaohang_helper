@@ -115,6 +115,12 @@ def call_api(system_prompt, user_question):
             resp = requests.post(API_URL, headers=headers, json=data, timeout=TIMEOUT)
             if resp.status_code == 401:
                 return "API Key 失效，请联系老师", {}
+            if resp.status_code == 429:
+                last_error = "⏳ API 请求过于频繁，正在等待重试..."
+                if attempt < MAX_RETRIES:
+                    wait = 3 * (attempt + 1)
+                    time.sleep(wait)
+                    continue
             if resp.status_code != 200:
                 return f"API 异常，状态码：{resp.status_code}", {}
             result = resp.json()

@@ -7,13 +7,7 @@ from src.config import API_URL, API_KEY, MODEL, TIMEOUT, MAX_RETRIES
 def call_ai_api(system_prompt, user_question):
     """
     调用硅基流动 API，返回 (回答文本, token使用量字典)
-    超时自动重试，最多 MAX_RETRIES 次
-
-    异常处理覆盖：
-    - 请求超时（Timeout）→ 自动重试
-    - 网络连接失败（ConnectionError）
-    - API Key 失效（401）
-    - API 返回格式异常（KeyError/IndexError）
+    超时/429限流 自动重试，最多 MAX_RETRIES 次
     """
     headers = {
         "Authorization": f"Bearer {API_KEY}",
@@ -37,6 +31,12 @@ def call_ai_api(system_prompt, user_question):
 
             if response.status_code == 401:
                 return "❌ API Key 失效，请联系老师重新获取", {}
+            elif response.status_code == 429:
+                last_error = "⏳ API 请求过于频繁，正在等待重试..."
+                if attempt < MAX_RETRIES:
+                    wait = 3 * (attempt + 1)  # 递增等待：3s, 6s
+                    time.sleep(wait)
+                    continue
             elif response.status_code != 200:
                 return f"❌ API 异常，状态码：{response.status_code}", {}
 
