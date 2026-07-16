@@ -4,9 +4,10 @@ import requests
 from src.config import API_URL, API_KEY, MODEL, TIMEOUT, MAX_RETRIES
 
 
-def call_ai_api(system_prompt, user_question):
+def call_ai_api_messages(messages):
     """
-    调用硅基流动 API，返回 (回答文本, token使用量字典)
+    调用硅基流动 API，messages 为完整对话列表
+    格式：[{"role": "system", "content": "..."}, {"role": "user", "content": "..."}, ...]
     超时/429限流 自动重试，最多 MAX_RETRIES 次
     """
     headers = {
@@ -16,10 +17,7 @@ def call_ai_api(system_prompt, user_question):
 
     data = {
         "model": MODEL,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_question},
-        ],
+        "messages": messages,
         "temperature": 0.3,
         "max_tokens": 1024,
     }
@@ -34,7 +32,7 @@ def call_ai_api(system_prompt, user_question):
             elif response.status_code == 429:
                 last_error = "⏳ API 请求过于频繁，正在等待重试..."
                 if attempt < MAX_RETRIES:
-                    wait = 3 * (attempt + 1)  # 递增等待：3s, 6s
+                    wait = 3 * (attempt + 1)
                     time.sleep(wait)
                     continue
             elif response.status_code != 200:
@@ -57,3 +55,7 @@ def call_ai_api(system_prompt, user_question):
             return f"⚠️ 发生错误：{e}", {}
 
     return last_error, {}
+
+
+# 兼容旧接口
+call_ai_api = call_ai_api_messages

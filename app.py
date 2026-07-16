@@ -98,14 +98,11 @@ def get_system_prompt(role, school_info):
 {school_info}"""
 
 # ───────── API 调用 ─────────
-def call_api(system_prompt, user_question):
+def call_api(messages):
     headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
     data = {
         "model": MODEL,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_question},
-        ],
+        "messages": messages,
         "temperature": 0.3,
         "max_tokens": 1024,
     }
@@ -183,7 +180,7 @@ with col_left:
         with tabs[tab_idx]:
             for i, q in enumerate(questions):
                 if st.button(q, key=f"tab_{tab_idx}_{i}", use_container_width=True):
-                    st.session_state["question"] = q
+                    st.session_state["pending_question"] = q
                     st.rerun()
 
     # -- 历史记录 --
@@ -218,19 +215,33 @@ with col_left:
         st.caption("暂无历史记录")
 
 with col_right:
-    question = st.text_input(
-        "💬 有什么想问的？",
-        value=st.session_state.get("question", ""),
-        placeholder="例如：保卫处电话是多少？",
-    )
-
     if "school_info" not in st.session_state:
         files = list(Path("data").glob("*.md"))
         if not files:
             st.warning("⚠️ 数据文件缺失，请补齐 data/ 目录下的 md 文件")
-            st.session_state.school_info = "【数据文件缺失】请检查 data/ 目录下是否有 md 文件"
+            st.session_state.school_info = "【数据文件缺失】"
         else:
             st.session_state.school_info = load_school_info()
+
+    # -- 初始化多轮对话 --
+    if "conversation" not in st.session_state:
+        st.session_state.conversation = []
+
+    current_sys = get_system_prompt(role, st.session_state.school_info)
+    if st.session_state.conversation:
+        if st.session_state.conversation[0]["content"] != current_sys:
+            st.session_state.conversation = []
+    else:
+        st.session_state.conversation = [{"role": "system", "content": current_sys}]
+
+    # -- 显示对话历史 --
+    for msg in st.session_state.conversation:
+        if msg["role"] == "user":
+            with st.chat_message("user"):
+                st.markdown(msg["content"])
+        elif msg["role"] == "assistant":
+            with st.chat_message("assistant"):
+                st.markdown(msg["content"])
 
     # -- 查看历史记录详情 --
     if "view_history" in st.session_state and st.session_state.view_history:
@@ -246,23 +257,45 @@ with col_right:
         st.markdown(f"**🤖 回答：**{record['answer']}")
         st.divider()
 
-    if st.button("🚀 提问", type="primary", disabled=st.session_state.processing):
-        if question and question.strip():
+    # -- 问题输入区 --
+    pending = st.session_state.get("pending_question", None)
+    if pending:
+        col_pending, col_send = st.columns([5, 1])
+        with col_pending:
+            st.info(f"💡 {pending}")
+        with col_send:
+            if st.button("🚀 发送", key="send_pending", use_container_width=True, disabled=st.session_state.processing):
+                st.session_state["question"] = pending
+                st.session_state.pop("pending_question", None)
+                st.session_state.processing = True
+                st.rerun()
+
+    question = st.chat_input("💬 有什么想问的？")
+    # 用户直接输入时清除 pending
+    if question and question.strip():
+        st.session_state.pop("pending_question", None)
+
+    if question and question.strip():
+        if st.session_state.processing:
+            st.warning("⏳ 正在回答上一条问题，请稍候...")
+        else:
             st.session_state["question"] = question.strip()
             st.session_state.processing = True
             st.rerun()
-        else:
-            st.info("💡 请输入你的问题，或点击左侧推荐问题")
 
     if st.session_state.processing:
+        q = st.session_state.get("question", "")
         with st.spinner("小航正在思考中..."):
-            prompt = get_system_prompt(role, st.session_state.school_info)
+            st.session_state.conversation.append({"role": "user", "content": q})
+
             t0 = time.time()
-            answer, usage = call_api(prompt, st.session_state.get("question", "").strip())
+            answer, usage = call_api(st.session_state.conversation)
             elapsed = time.time() - t0
 
-            # 保存到历史记录
-            _add_record(role, st.session_state.get("question", "").strip(), answer)
+            if not answer.startswith("❌") and not answer.startswith("⏰") and not answer.startswith("🌐") and not answer.startswith("⚠️"):
+                st.session_state.conversation.append({"role": "assistant", "content": answer})
+
+            _add_record(role, q, answer)
             st.session_state.history = _load_history()
 
             st.session_state["last_answer"] = answer
@@ -273,22 +306,29 @@ with col_right:
         st.session_state.processing = False
         st.rerun()
 
-    # -- 显示上一次的回答 --
-    if "last_answer" in st.session_state and st.session_state.last_answer:
-        st.subheader("🤖 小航的回答")
-        st.markdown(st.session_state.last_answer)
-        usage = st.session_state.get("last_usage", {})
-        if usage:
-            st.caption(f"Token：输入{usage.get('prompt_tokens','?')} + 输出{usage.get('completion_tokens','?')} = 总计{usage.get('total_tokens','?')}")
-        # 显示回答元信息
+    # -- 新对话按钮 + 导出 --
+    col_new, col_export = st.columns([1, 1])
+    with col_new:
+        if st.button("🆕 新对话", use_container_width=True, disabled=st.session_state.processing):
+            st.session_state.conversation = []
+            st.session_state.pop("last_answer", None)
+            st.rerun()
+    with col_export:
+        if "last_answer" in st.session_state and st.session_state.last_answer:
+            q = st.session_state.get("question", "")
+            a = st.session_state.last_answer
+            export_md = f"# 小航对话记录\n\n**问题：**{q}\n\n**回答：**\n{a}\n"
+            st.download_button("📥 导出最后回答", data=export_md, file_name="小航对话.md", mime="text/markdown", use_container_width=True)
+
+    # -- 显示 Token / 字数 / 耗时 --
+    if "last_usage" in st.session_state and st.session_state.last_usage:
+        usage = st.session_state.last_usage
         chars = st.session_state.get("answer_chars", 0)
         elapsed = st.session_state.get("elapsed", 0)
-        st.caption(f"回答字数：{chars} 字 · 耗时：{elapsed:.1f} 秒")
-        # 导出当前对话
-        q = st.session_state.get("question", "")
-        a = st.session_state.last_answer
-        export_md = f"# 小航对话记录\n\n**问题：**{q}\n\n**回答：**\n{a}\n"
-        st.download_button("📥 导出当前对话", data=export_md, file_name="小航对话.md", mime="text/markdown")
+        st.caption(
+            f"回答字数：{chars} 字 · 耗时：{elapsed:.1f} 秒 · "
+            f"Token：输入 {usage.get('prompt_tokens', '?')} + 输出 {usage.get('completion_tokens', '?')}"
+        )
 
     st.divider()
     with st.expander("📞 电话黄页（静态兜底）"):
