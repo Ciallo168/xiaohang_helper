@@ -92,6 +92,12 @@ with col_left:
         st.rerun()
 
     if st.session_state.history:
+        # 导出全部历史
+        full_md = "# 小航 · 全部对话历史\n\n"
+        for r in reversed(st.session_state.history):
+            full_md += f"---\n**时间：**{r['time']} | **身份：**{r['role']}\n\n**问题：**{r['question']}\n\n**回答：**\n{r['answer']}\n\n"
+        st.download_button("📥 导出全部历史", data=full_md, file_name="小航历史记录.md", mime="text/markdown", use_container_width=True, disabled=st.session_state.processing)
+
         # 倒序显示，最新的在最上面
         for idx, record in enumerate(reversed(st.session_state.history)):
             real_idx = len(st.session_state.history) - 1 - idx
@@ -177,6 +183,11 @@ with col_right:
                 f"输出 {usage.get('completion_tokens', 'N/A')} = "
                 f"总计 {usage.get('total_tokens', 'N/A')}"
             )
+        # 导出当前对话
+        q = st.session_state.get("question", "")
+        a = st.session_state.last_answer
+        export_md = f"# 小航对话记录\n\n**问题：**{q}\n\n**回答：**\n{a}\n"
+        st.download_button("📥 导出当前对话", data=export_md, file_name="小航对话.md", mime="text/markdown")
 
     # -- 电话黄页静态页（API 不可用时的兜底）--
     st.divider()

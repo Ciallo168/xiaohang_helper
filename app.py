@@ -181,6 +181,12 @@ with col_left:
         st.rerun()
 
     if st.session_state.history:
+        # 导出全部历史
+        full_md = "# 小航 · 全部对话历史\n\n"
+        for r in reversed(st.session_state.history):
+            full_md += f"---\n**时间：**{r['time']} | **身份：**{r['role']}\n\n**问题：**{r['question']}\n\n**回答：**\n{r['answer']}\n\n"
+        st.download_button("📥 导出全部历史", data=full_md, file_name="小航历史记录.md", mime="text/markdown", use_container_width=True, disabled=st.session_state.processing)
+
         for idx, record in enumerate(reversed(st.session_state.history)):
             real_idx = len(st.session_state.history) - 1 - idx
             label = f"{record['time']} [{record['role']}] {record['question'][:20]}..."
@@ -249,6 +255,11 @@ with col_right:
         usage = st.session_state.get("last_usage", {})
         if usage:
             st.caption(f"Token：输入{usage.get('prompt_tokens','?')} + 输出{usage.get('completion_tokens','?')} = 总计{usage.get('total_tokens','?')}")
+        # 导出当前对话
+        q = st.session_state.get("question", "")
+        a = st.session_state.last_answer
+        export_md = f"# 小航对话记录\n\n**问题：**{q}\n\n**回答：**\n{a}\n"
+        st.download_button("📥 导出当前对话", data=export_md, file_name="小航对话.md", mime="text/markdown")
 
     st.divider()
     with st.expander("📞 电话黄页（静态兜底）"):
