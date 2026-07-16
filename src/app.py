@@ -23,7 +23,7 @@ if _LOCAL_PKGS.exists():
 
 import streamlit as st
 from src.prompts import load_school_info, get_system_prompt
-from src.api import call_ai_api_messages
+from src.api import call_ai_api_messages, check_network
 from src.history import load_history, add_record, clear_history
 
 # ==================== 推荐问题（按类别标签页） ====================
@@ -61,6 +61,18 @@ with col_logo:
 with col_title:
     st.markdown("## 小航 · 郑州航院校园信息助手")
 st.caption("基于 Streamlit + 硅基流动大模型 API | 数据更新日期：2026-07-16")
+
+# -- 网络检测 --
+if "online" not in st.session_state:
+    st.session_state.online, _ = check_network()
+if not st.session_state.online:
+    col_warn, col_retry = st.columns([5, 1])
+    with col_warn:
+        st.warning("🌐 网络连接异常，部分功能不可用")
+    with col_retry:
+        if st.button("🔄 重试", key="retry_network", use_container_width=True):
+            st.session_state.online, _ = check_network()
+            st.rerun()
 
 # ==================== 左右分栏布局 ====================
 col_left, col_right = st.columns([1, 3])
@@ -159,7 +171,7 @@ with col_right:
                 st.session_state.processing = True
                 st.rerun()
 
-    question = st.chat_input("💬 有什么想问的？")
+    question = st.chat_input("💬 有什么想问的？" if st.session_state.online else "🌐 网络异常，暂时无法提问")
     # 用户直接输入时清除 pending
     if question and question.strip():
         st.session_state.pop("pending_question", None)

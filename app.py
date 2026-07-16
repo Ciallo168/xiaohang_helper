@@ -24,6 +24,14 @@ MODEL = "zai-org/GLM-5.2"
 TIMEOUT = 60
 MAX_RETRIES = 2
 
+# ───────── 网络检测 ─────────
+def _check_network():
+    try:
+        requests.head("https://api.siliconflow.cn", timeout=3)
+        return True
+    except Exception:
+        return False
+
 # ───────── 数据读取 ─────────
 def load_school_info():
     """读取 data/ 下所有 md 文件"""
@@ -169,6 +177,18 @@ with col_title:
     st.markdown("## 小航 · 郑州航院校园信息助手")
 st.caption("基于 Streamlit + 硅基流动大模型 API | 数据更新日期：2026-07-16")
 
+# -- 网络检测 --
+if "online" not in st.session_state:
+    st.session_state.online = _check_network()
+if not st.session_state.online:
+    col_warn, col_retry = st.columns([5, 1])
+    with col_warn:
+        st.warning("🌐 网络连接异常，部分功能不可用")
+    with col_retry:
+        if st.button("🔄 重试", key="retry_network", use_container_width=True):
+            st.session_state.online = _check_network()
+            st.rerun()
+
 col_left, col_right = st.columns([1, 3])
 
 with col_left:
@@ -270,7 +290,7 @@ with col_right:
                 st.session_state.processing = True
                 st.rerun()
 
-    question = st.chat_input("💬 有什么想问的？")
+    question = st.chat_input("💬 有什么想问的？" if st.session_state.online else "🌐 网络异常，暂时无法提问")
     # 用户直接输入时清除 pending
     if question and question.strip():
         st.session_state.pop("pending_question", None)

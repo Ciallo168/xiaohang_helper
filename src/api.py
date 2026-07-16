@@ -4,6 +4,15 @@ import requests
 from src.config import API_URL, API_KEY, MODEL, TIMEOUT, MAX_RETRIES
 
 
+def check_network():
+    """快速检测网络连通性，返回 (是否在线, 提示文本)"""
+    try:
+        requests.head("https://api.siliconflow.cn", timeout=3)
+        return True, ""
+    except Exception:
+        return False, "🌐 网络连接异常，请检查网络后重试"
+
+
 def call_ai_api_messages(messages):
     """
     调用硅基流动 API，messages 为完整对话列表
