@@ -186,7 +186,13 @@ with col_right:
     # -- 查看历史记录详情 --
     if "view_history" in st.session_state and st.session_state.view_history:
         record = st.session_state.view_history
-        st.info(f"📋 历史记录 | {record['time']} | 身份：{record['role']}")
+        col_hist, col_close = st.columns([10, 1])
+        with col_hist:
+            st.info(f"📋 历史记录 | {record['time']} | 身份：{record['role']}")
+        with col_close:
+            if st.button("✖", key="close_history"):
+                st.session_state.view_history = None
+                st.rerun()
         st.markdown(f"**❓ 问题：**{record['question']}")
         st.markdown(f"**🤖 回答：**{record['answer']}")
         st.divider()
