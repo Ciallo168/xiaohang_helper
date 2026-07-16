@@ -49,10 +49,14 @@ PRESET_QUESTIONS = {
 
 
 # ==================== 页面配置 ====================
-st.set_page_config(page_title="小航AI助手", page_icon="🎓", layout="wide")
+st.set_page_config(page_title="小航AI助手", page_icon="assets/logo.png", layout="wide")
 
 # ==================== 标题和边界声明 ====================
-st.title("🎓 小航 · 郑州航院校园信息助手")
+col_logo, col_title = st.columns([0.06, 0.94], vertical_alignment="center")
+with col_logo:
+    st.image("assets/logo.png", width=80)
+with col_title:
+    st.markdown("## 小航 · 郑州航院校园信息助手")
 st.caption("基于 Streamlit + 硅基流动大模型 API | 数据更新日期：2026-07-16")
 
 # ==================== 左右分栏布局 ====================
