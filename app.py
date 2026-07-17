@@ -19,7 +19,7 @@ import streamlit as st
 
 # ───────── 配置 ─────────
 API_URL = "https://api.siliconflow.cn/v1/chat/completions"
-API_KEY = "sk-gfiyfctmuzepkxtylqvxygpceskmucwdypqunqcvxyxoyouq"
+API_KEY = "your key"
 MODEL = "zai-org/GLM-5.2"
 TIMEOUT = 60
 MAX_RETRIES = 2
