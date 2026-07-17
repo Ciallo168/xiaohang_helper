@@ -3,9 +3,7 @@
 小航 · 郑州航院校园信息查询 AI 助手
 
 运行方式：
-    双击 启动小航.bat
-    或
-    set PYTHONPATH=pkgs && streamlit run src/app.py
+    streamlit run src/app.py
 """
 
 import sys

@@ -1,6 +1,6 @@
 """
 小航 · 郑州航院校园信息查询 AI 助手
-运行：双击 启动小航.bat
+运行：streamlit run app.py
 """
 import sys
 import json
