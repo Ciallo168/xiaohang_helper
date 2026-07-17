@@ -291,17 +291,17 @@ with col_right:
                 st.rerun()
 
     question = st.chat_input("💬 有什么想问的？" if st.session_state.online else "🌐 网络异常，暂时无法提问")
-    # 用户直接输入时清除 pending
-    if question and question.strip():
-        st.session_state.pop("pending_question", None)
-
-    if question and question.strip():
-        if st.session_state.processing:
-            st.warning("⏳ 正在回答上一条问题，请稍候...")
+    if question:
+        if question.strip():
+            st.session_state.pop("pending_question", None)
+            if st.session_state.processing:
+                st.warning("⏳ 正在回答上一条问题，请稍候...")
+            else:
+                st.session_state["question"] = question.strip()
+                st.session_state.processing = True
+                st.rerun()
         else:
-            st.session_state["question"] = question.strip()
-            st.session_state.processing = True
-            st.rerun()
+            st.warning("💡 请输入你的问题，或点击左侧推荐问题")
 
     if st.session_state.processing:
         q = st.session_state.get("question", "")
