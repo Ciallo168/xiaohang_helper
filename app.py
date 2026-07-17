@@ -216,6 +216,8 @@ with col_left:
     if st.button("🗑️ 清空历史记录", use_container_width=True, disabled=st.session_state.processing):
         _clear_history()
         st.session_state.history = []
+        for k in ["last_answer", "last_usage", "elapsed", "answer_chars"]:
+            st.session_state.pop(k, None)
         st.rerun()
 
     if st.session_state.history:
@@ -331,7 +333,8 @@ with col_right:
     with col_new:
         if st.button("🆕 新对话", use_container_width=True, disabled=st.session_state.processing):
             st.session_state.conversation = []
-            st.session_state.pop("last_answer", None)
+            for k in ["last_answer", "last_usage", "elapsed", "answer_chars"]:
+                st.session_state.pop(k, None)
             st.rerun()
     with col_export:
         if "last_answer" in st.session_state and st.session_state.last_answer:
