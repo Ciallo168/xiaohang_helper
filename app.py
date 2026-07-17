@@ -19,7 +19,7 @@ import streamlit as st
 
 # ───────── 配置 ─────────
 API_URL = "https://api.siliconflow.cn/v1/chat/completions"
-API_KEY = "your key"
+API_KEY = "sk-gfiyfctmuzepkxtylqvxygpceskmucwdypqunqcvxyxoyouq"
 MODEL = "zai-org/GLM-5.2"
 TIMEOUT = 60
 MAX_RETRIES = 2
@@ -350,21 +350,20 @@ with col_right:
             f"Token：输入 {usage.get('prompt_tokens', '?')} + 输出 {usage.get('completion_tokens', '?')}"
         )
 
-    # -- 电话黄页静态页（已隐藏，保留在代码中备用）--
-    # st.divider()
-    # with st.expander("📞 电话黄页（静态兜底）"):
-    #     st.markdown("""
-    # | 部门 | 电话 |
-    # |------|------|
-    # | 校园 110（保卫处 24h） | 0371-61916110 |
-    # | 学校总值班室 | 0371-61911000 |
-    # | 校医院急诊（24h） | 0371-61912120 |
-    # | 心理咨询中心 | 0371-61912580 |
-    # | 后勤管理处 | 0371-61912800 |
-    # | 卡务中心 | 0371-61912810 |
-    # | 招生办公室 | 0371-61912530 |
-    # | 全国心理援助热线 | 12320-5 |
-    # """)
+    st.divider()
+    with st.expander("📞 电话黄页（静态兜底）"):
+        st.markdown("""
+| 部门 | 电话 |
+|------|------|
+| 校园 110（保卫处 24h） | 0371-61916110 |
+| 学校总值班室 | 0371-61911000 |
+| 校医院急诊（24h） | 0371-61912120 |
+| 心理咨询中心 | 0371-61912580 |
+| 后勤管理处 | 0371-61912800 |
+| 卡务中心 | 0371-61912810 |
+| 招生办公室 | 0371-61912530 |
+| 全国心理援助热线 | 12320-5 |
+""")
 
 st.divider()
 st.caption("郑州航空工业管理学院人工智能专业认知实习项目 · 电话以官方为准")
